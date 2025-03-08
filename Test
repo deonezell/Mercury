@@ -1,0 +1,60 @@
+import numpy as np
+
+class Agent:
+    def __init__(self, altruism_level):
+        self.altruism_level = altruism_level
+
+class Group:
+    def __init__(self, size, altruism_level):
+        self.agents = [Agent(np.random.normal(altruism_level, 0.1)) for _ in range(size)]
+
+    def interact(self):
+        for i in range(len(self.agents)):
+            for j in range(len(self.agents)):
+                if i != j and np.random.rand() < self.agents[i].altruism_level:
+                    # Help action
+                    self.agents[i].altruism_level -= 0.1  # Cost
+                    self.agents[j].altruism_level += 0.1  # Benefit
+
+    def mutate(self, mutation_rate):
+        for agent in self.agents:
+            if np.random.rand() < mutation_rate:
+                agent.altruism_level += np.random.normal(0, 0.1)
+
+class Population:
+    def __init__(self, num_groups, group_size, initial_altruism, mutation_rate, selection_pressure):
+        self.groups = [Group(group_size, initial_altruism) for _ in range(num_groups)]
+        self.mutation_rate = mutation_rate
+        self.selection_pressure = selection_pressure
+
+    def step(self):
+        for group in self.groups:
+            group.interact()
+            group.mutate(self.mutation_rate)
+        
+        # Selection
+        avg_altruism = [np.mean([agent.altruism_level for agent in group.agents]) for group in self.groups]
+        sorted_groups = [x for _, x in sorted(zip(avg_altruism, self.groups), key=lambda pair: pair[0], reverse=True)]
+        self.groups = sorted_groups[:int(len(self.groups) * self.selection_pressure)] + \
+                      [Group(len(self.groups[0].agents), np.mean(avg_altruism)) for _ in range(len(self.groups) - int(len(self.groups) * self.selection_pressure))]
+
+    def average_altruism(self):
+        return np.mean([agent.altruism_level for group in self.groups for agent in group.agents])
+
+# Parameters
+num_groups = 100
+group_size = 10
+initial_altruism = 0.5
+mutation_rate = 0.01
+selection_pressure = 0.2
+generations = 100
+
+# Initialize population
+population = Population(num_groups, group_size, initial_altruism, mutation_rate, selection_pressure)
+
+# Run simulation
+for generation in range(generations):
+    population.step()
+    print(f"Generation {generation}: Average Altruism = {population.average_altruism()}")
+
+print(f"Final Average Altruism: {population.average_altruism()}")
